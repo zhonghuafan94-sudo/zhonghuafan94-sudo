@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SHC舵机-内存表解析</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:"Microsoft YaHei",sans-serif;}
+body{padding:20px;background:#fff;color:#333;line-height:1.6;font-size:14px;}
+h1{font-size:24px;margin:20px 0;font-weight:bold;text-align:center;}
+h2{font-size:18px;margin:16px 0 10px;font-weight:bold;}
+h3{font-size:16px;margin:12px 0 8px;font-weight:bold;}
+table{width:100%;border-collapse:collapse;margin:10px 0 16px;table-layout:fixed;}
+table th,table td{border:1px solid #ddd;padding:8px 6px;text-align:left;word-break:break-all;}
+table th{background:#f5f7fa;font-weight:bold;}
+ul{margin-left:20px;margin-bottom:10px;}
+li{margin-bottom:4px;}
+.tip{padding:8px 16px;background:#fff9e9;border-left:5px solid #fbc302;border-radius:4px;margin:15px 0;}
+.toc{margin:15px 0;padding:10px;background:#f8f9fa;border-radius:4px;}
+.toc a{display:block;margin:4px 0;color:#0066cc;text-decoration:none;}
+</style>
+</head>
+<body>
+
+<h1>SHC舵机-内存表解析</h1>
+
+<div class="toc">
+<p><strong>目录</strong></p>
+<a href="#1">1 舵机通信协议</a>
+<a href="#2">2 对象字典OD</a>
+<a href="#3-1">3.1 通信对象子协议区</a>
+<a href="#3-2">3.2 制造商特定子协议区</a>
+<a href="#3-3">3.3 标准化设备子协议区</a>
+<a href="#3">3 特殊字节解释</a>
+</div>
+
+<h2 id="1">1 舵机通信协议</h2>
+<p>舵机使用CANopen通信协议，舵机默认CAN波特率为125k，波特率可配置范围20k~1Mbps，默认通信地址（节点）为1。</p>
+<ul>
+<li>使用SDO指令可访问舵机所有字典对象实现舵机参数修改</li>
+<li>使用PDO指令可快速控制舵机实现伺服功能</li>
+<li>使用SYNC指令可快速同步反馈总线上所有舵机的实时状态</li>
+<li>RPDO1默认映射控制字与舵机模式对象用于舵机扭矩开关与模式配置</li>
+<li>RPDO2默认映射目标位置对象用于舵机伺服位置控制</li>
+<li>RPDO3默认映射目标速度对象用于舵机伺服速度控制</li>
+<li>RPDO4默认映射额定电流对象用于舵机伺服额定电流控制</li>
+<li>TPDO2默认映射实时位对象使用SYNC指令可实时反馈总线上所有舵机实时位置</li>
+<li>TPDO1、TPDO3与TDPO4默认映射关闭</li>
+</ul>
+
+<h2 id="2">2 对象字典OD</h2>
+<p>CANopen对象字典（OD: Object Dictionary）是CANopen协议最为核心的概念。所谓的对象字典就是一个有序的对象组，描述了对应CANopen节点的所有参数，包括通讯数据的存放位置也列入其索引，对象字典通过索引与子索引进行寻址。</p>
+
+<h3 id="3-1">3.1 通信对象子协议区</h3>
+<table>
+<tr><th>索引</th><th>子索引</th><th>对象</th><th>权限</th><th>类型</th><th>单位</th><th>默认值</th><th>映射PDO</th><th>说明</th></tr>
+<tr><td>1000h</td><td>00h</td><td>设备类型</td><td>只读</td><td>U32</td><td>–</td><td>00020192h</td><td>–</td><td>CIA402设备的标准值</td></tr>
+<tr><td>1001h</td><td>00h</td><td>错误寄存器</td><td>只读</td><td>U8</td><td>–</td><td>0</td><td>TPDO</td><td>详见特殊字节位解析</td></tr>
+<tr><td>1002h</td><td>00h</td><td>舵机状态</td><td>只读</td><td>U32</td><td>–</td><td>0</td><td>TPDO</td><td>舵机自定义状态，详见特殊字节位解析</td></tr>
+<tr><td>1003h</td><td>00h</td><td>预定义错误域</td><td>读写</td><td>U8</td><td>–</td><td>0</td><td>–</td><td>发生错误的次数，写入00h则清除错误历史记录</td></tr>
+<tr><td>1005h</td><td>00h</td><td>SYNC报文COB-ID</td><td>只读</td><td>U32</td><td>–</td><td>00000080h</td><td>–</td><td>不支持修改SYNC的COB-ID</td></tr>
+<tr><td>1017h</td><td>00h</td><td>生产者心跳时间</td><td>读写</td><td>U16</td><td>100ms</td><td>0</td><td>–</td><td>0表示停止心跳功能</td></tr>
+<tr><td>1200h</td><td>01h</td><td>TSDO对象</td><td>只读</td><td>U32</td><td>–</td><td>NodeID+600h</td><td>–</td><td>–</td></tr>
+<tr><td>1200h</td><td>02h</td><td>RSDO对象</td><td>只读</td><td>U32</td><td>–</td><td>NodeID+580h</td><td>–</td><td>–</td></tr>
+<tr><td>1400h</td><td>01h</td><td>RPDO1对象</td><td>只读</td><td>U32</td><td>–</td><td>NodeID+200h</td><td>–</td><td>–</td></tr>
+<tr><td>1401h</td><td>01h</td><td>RPDO2对象</td><td>只读</td><td>U32</td><td>–</td><td>NodeID+300h</td><td>–</td><td>–</td></tr>
+<tr><td>1402h</td><td>01h</td><td>RPDO3对象</td><td>只读</td><td>U32</td><td>–</td><td>NodeID+400h</td><td>–</td><td>–</td></tr>
+<tr><td>1600h</td><td>01h</td><td>映射对象地址1</td><td>读写</td><td>U32</td><td>–</td><td>0x60400010</td><td>–</td><td>–</td></tr>
+<tr><td>1601h</td><td>01h</td><td>映射对象地址1</td><td>读写</td><td>U32</td><td>–</td><td>0x607a0020</td><td>–</td><td>–</td></tr>
+<tr><td>1800h</td><td>01h</td><td>TPDO1对象</td><td>只读</td><td>U32</td><td>–</td><td>NodeID+180h</td><td>–</td><td>–</td></tr>
+<tr><td>1801h</td><td>01h</td><td>TPDO2对象</td><td>只读</td><td>U32</td><td>–</td><td>NodeID+280h</td><td>–</td><td>–</td></tr>
+</table>
+
+<h3 id="3-2">3.2 制造商特定子协议区</h3>
+<table>
+<tr><th>索引</th><th>子索引</th><th>对象</th><th>权限</th><th>类型</th><th>单位</th><th>默认值</th><th>映射PDO</th><th>说明</th></tr>
+<tr><td>2000h</td><td>00h</td><td>舵机NodeId</td><td>读写</td><td>S8</td><td>–</td><td>1</td><td>–</td><td>修改立即生效</td></tr>
+<tr><td>2001h</td><td>00h</td><td>舵机波特率</td><td>读写</td><td>U8</td><td>–</td><td>4</td><td>–</td><td>重启生效</td></tr>
+<tr><td>2003h</td><td>00h</td><td>默认模式</td><td>读写</td><td>S8</td><td>–</td><td>1</td><td>–</td><td>详见模式定义</td></tr>
+<tr><td>2007h</td><td>00h</td><td>最小角度限制</td><td>读写</td><td>S16</td><td>0.022度</td><td>0</td><td>–</td><td>多圈时为0</td></tr>
+<tr><td>2008h</td><td>00h</td><td>最大角度限制</td><td>读写</td><td>S16</td><td>0.022度</td><td>0</td><td>–</td><td>多圈时为0</td></tr>
+<tr><td>200Ah</td><td>00h</td><td>舵机相位</td><td>读写</td><td>U16</td><td>–</td><td>–</td><td>–</td><td>无特别需求不可修改</td></tr>
+<tr><td>200Bh</td><td>00h</td><td>保护开关</td><td>读写</td><td>U16</td><td>–</td><td>7</td><td>–</td><td>对应位设置1开启保护</td></tr>
+<tr><td>200Ch</td><td>00h</td><td>LED报警条件</td><td>读写</td><td>U16</td><td>–</td><td>15</td><td>–</td><td>对应位设置1开启报警</td></tr>
+<tr><td>200Dh</td><td>00h</td><td>最高温度上限</td><td>读写</td><td>U16</td><td>°C</td><td>70</td><td>–</td><td>–</td></tr>
+<tr><td>202Bh</td><td>00h</td><td>当前电压</td><td>只读</td><td>S16</td><td>0.1V</td><td>?</td><td>TPDO</td><td>–</td></tr>
+<tr><td>202Ch</td><td>00h</td><td>当前温度</td><td>只读</td><td>S16</td><td>°C</td><td>?</td><td>TPDO</td><td>–</td></tr>
+</table>
+
+<h3 id="3-3">3.3 标准化设备子协议区</h3>
+<table>
+<tr><th>索引</th><th>子索引</th><th>对象</th><th>权限</th><th>类型</th><th>单位</th><th>默认值</th><th>映射PDO</th><th>说明</th></tr>
+<tr><td>6040h</td><td>00h</td><td>控制字</td><td>读写</td><td>U16</td><td>–</td><td>0</td><td>RPDO</td><td>0关扭矩，15开扭矩</td></tr>
+<tr><td>6041h</td><td>00h</td><td>状态字</td><td>只读</td><td>U16</td><td>–</td><td>0</td><td>TPDO</td><td>–</td></tr>
+<tr><td>6060h</td><td>00h</td><td>操作模式</td><td>读写</td><td>S8</td><td>–</td><td>默认模式</td><td>RPDO</td><td>–</td></tr>
+<tr><td>607Ah</td><td>00h</td><td>目标位置</td><td>读写</td><td>S32</td><td>0.022度</td><td>–</td><td>RPDO</td><td>–</td></tr>
+<tr><td>6063h</td><td>00h</td><td>实时位置</td><td>只读</td><td>S32</td><td>0.022度</td><td>?</td><td>TPDO</td><td>–</td></tr>
+<tr><td>60FFh</td><td>00h</td><td>目标速度</td><td>读写</td><td>S32</td><td>0.183rpm</td><td>–</td><td>RPDO</td><td>–</td></tr>
+</table>
+
+<h2 id="3">3 特殊字节解释</h2>
+
+<h3>3.1 模式定义</h3>
+<table>
+<tr><th>值</th><th>模式</th><th>说明</th></tr>
+<tr><td>1</td><td>标准位置模式</td><td>目标位置、速度、电流、加减速控制</td></tr>
+<tr><td>3</td><td>标准速度模式</td><td>速度、电流、加减速控制</td></tr>
+<tr><td>12</td><td>电机模式</td><td>额定电流控制，用于测试</td></tr>
+</table>
+
+<h3>3.2 错误寄存器定义</h3>
+<ul>
+<li>BIT1（2）：舵机过流</li>
+<li>BIT2（4）：舵机过压/欠压</li>
+<li>BIT3（8）：舵机过热</li>
+<li>BIT7（128）：舵机位置传感器通信出错</li>
+</ul>
+
+<h3>3.3 舵机相位</h3>
+<ul>
+<li>BIT0（1）：驱动方向相位；0正向，1反向</li>
+<li>BIT1（2）：位置反馈方向相位；0正向，1反向</li>
+<li>BIT2（4）：无刷/有刷；0无刷，1有刷（重启生效）</li>
+</ul>
+
+<h3>3.4 舵机状态</h3>
+<ul>
+<li>BIT0（1）：扭矩状态；0关闭，1打开</li>
+<li>BIT1（2）：移动状态；0移动中，1已停止</li>
+<li>BIT2（4）：目标状态；0已到达，1未到达</li>
+</ul>
+
+<h3>3.5 保护开关 & LED报警条件</h3>
+<ul>
+<li>BIT1（2）：过流保护/报警</li>
+<li>BIT2（4）：电压保护/报警</li>
+<li>BIT3（8）：过热保护/报警</li>
+<li>BIT7（128）：编码器保护/报警</li>
+</ul>
+
+<h3>3.6 状态复位</h3>
+<ul>
+<li>BIT1（2）：复位过流故障</li>
+<li>BIT2（4）：复位过压/欠压</li>
+<li>BIT3（8）：复位过热状态</li>
+<li>BIT7（128）：复位磁编码状态</li>
+<li>BIT14（16384）：圈数复位</li>
+<li>BIT15（32768）：中位设置（设为8192）</li>
+</ul>
+
+</body>
+</html>

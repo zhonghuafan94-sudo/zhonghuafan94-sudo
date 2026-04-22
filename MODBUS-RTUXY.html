@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MODBUS-RTU协议 - FEETECH</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+        body {
+            padding: 20px;
+            background: #fff;
+            color: #333;
+            line-height: 1.6;
+        }
+        .hljs-center {
+            text-align: center;
+            margin: 20px 0;
+        }
+        h1, h2, h3 {
+            margin: 15px 0;
+            color: #222;
+        }
+        h1 {
+            font-size: 24px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+        h2 {
+            font-size: 20px;
+            margin-top: 25px;
+        }
+        h3 {
+            font-size: 18px;
+        }
+        ul, ol {
+            margin-left: 25px;
+            margin-bottom: 15px;
+        }
+        li {
+            margin: 5px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            background: #fafafa;
+        }
+        table th, table td {
+            border: 1px solid #ddd;
+            padding: 8px 12px;
+            text-align: left;
+        }
+        table th {
+            background: #f5f5f5;
+            font-weight: bold;
+        }
+        pre {
+            background: #f6f8fa;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+        code {
+            font-family: "Consolas", "Monaco", monospace;
+            color: #d73a4a;
+        }
+        pre code {
+            color: #24292e;
+        }
+        a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        p {
+            margin: 10px 0;
+        }
+        strong {
+            color: #000;
+        }
+        .nav {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 6px;
+        }
+    </style>
+</head>
+<body>
+<div class="hljs-center">
+    <h1><a id="MODBUSRTU_2"></a>MODBUS-RTU协议</h1>
+</div>
+
+<div class="nav">
+    <h3>目录</h3>
+    <ul>
+        <li><a href="#MODBUSRTU_2">MODBUS-RTU协议</a></li>
+        <li><a href="#1__9">1 协议概述</a></li>
+        <li><a href="#2__12">2 通信参数</a></li>
+        <li><a href="#3_modbusrtu_15">3 modbus-rtu帧格式</a>
+            <ul>
+                <li><a href="#31__0x03_18">3.1 读保持寄存器 0x03</a></li>
+                <li><a href="#32__0x06_44">3.2 写单个寄存器 0x06</a></li>
+                <li><a href="#33__0x10_66">3.3 写多个寄存器 0x10</a></li>
+                <li><a href="#34_ID_0x11_95">3.4 查询总线从机设备ID 0x11</a></li>
+                <li><a href="#35_ID_0x41_115">3.5 重启指定ID从机设备 0x41</a></li>
+            </ul>
+        </li>
+    </ul>
+</div>
+
+<h1><a id="1__9"></a>1 协议概述</h1>
+<p>MODBUS-RTU(国标GB/T19582-2008)通讯协议进行通讯，支持一主站控制多个从站，通过自带的上位机可以配置 247个从站地址(0为广播地址，1-247为单播地址)，主站可以是单片机、PLC或PC机等。</p>
+
+<h1><a id="2__12"></a>2 通信参数</h1>
+<p>出厂时的串口默认配置，波特率默认为 115200bps，数据位 8，无校验，停止位 1；波特率可配置范围 4800~256k0bps，驱动器默认通信地址（站号）为1。</p>
+
+<h1><a id="3_modbusrtu_15"></a>3 modbus-rtu帧格式</h1>
+<p>本驱动器支持 modbus的0x03(读保持寄存器)、0x06(写单个寄存器)、0x10(写多个寄存器)，0x83（异常码），异常码支持0x01(操作码错误)与0x02(地址错误)。</p>
+
+<h2><a id="31__0x03_18"></a>3.1 读保持寄存器 0x03</h2>
+<p><strong>主站发送：</strong></p>
+<table>
+    <tr>
+        <th>字节</th>
+        <th>1</th>
+        <th>2</th>
+        <th>3</th>
+        <th>4</th>
+        <th>5</th>
+        <th>6</th>
+        <th>7</th>
+        <th>8</th>
+    </tr>
+    <tr>
+        <td>内容</td>
+        <td>从站地址</td>
+        <td>0x03</td>
+        <td>寄存器地址高位</td>
+        <td>寄存器地址低位</td>
+        <td>读数据长度高位</td>
+        <td>读数据长度低位</td>
+        <td>CRC高位</td>
+        <td>CRC低位</td>
+    </tr>
+</table>
+<p>第1字节从站地址：从站地址码（1～247）<br>
+第2字节0x03 ：读寄存器值功能码<br>
+第3、4字节：读取寄存器的开始地址<br>
+第5、6字节：读数据长度<br>
+第7、8字节：字节1到6的CRC16校验和</p>
+
+<p><strong>从站正常应答：</strong></p>
+<table>
+    <tr>
+        <th>字节</th>
+        <th>1</th>
+        <th>2</th>
+        <th>3</th>
+        <th>4、5</th>
+        <th>6、7</th>
+        <th>...</th>
+        <th>n-1、n</th>
+        <th>n+1</th>
+        <th>n+2</th>
+    </tr>
+    <tr>
+        <td>内容</td>
+        <td>从站地址</td>
+        <td>0x03</td>
+        <td>寄存器字节总数</td>
+        <td>寄存器数据1</td>
+        <td>寄存器数据2</td>
+        <td>...</td>
+        <td>寄存器数据m</td>
+        <td>CRC高位</td>
+        <td>CRC低位</td>
+    </tr>
+</table>
+<p>第1字节从站地址：从站地址码（1～247）<br>
+第2字节0x03 ：读寄存器值功能码<br>
+第3字节：从4到n（包括4及n）的寄存器字节总数<br>
+第4~n字节：读取的m个寄存器数据，其中m=(n-3)/2，n-1为高位字节，n为低位字节<br>
+第n＋1、n+2字节：字节1到n的CRC16 校验和</p>
+
+<p><strong>从站异常应答：</strong></p>
+<table>
+    <tr>
+        <th>字节</th>
+        <th>1</th>
+        <th>2</th>
+        <th>3</th>
+        <th>4</th>
+        <th>5</th>
+    </tr>
+    <tr>
+        <td>内容</td>
+        <td>从站地址</td>
+        <td>0x83</td>
+        <td>0x02</td>
+        <td>CRC高位</td>
+        <td>CRC低位</td>
+    </tr>
+</table>
+
+<h2><a id="32__0x06_44"></a>3.2 写单个寄存器 0x06</h2>
+<p><strong>主站发送：</strong></p>
+<table>
+    <tr>
+        <th>字节</th>
+        <th>1</th>
+        <th>2</th>
+        <th>3</th>
+        <th>4</th>
+        <th>5</th>
+        <th>6</th>
+        <th>7</th>
+        <th>8</th>
+    </tr>
+    <tr>
+        <td>内容</td>
+        <td>从站地址</td>
+        <td>0x06</td>
+        <td>寄存器地址高位</td>
+        <td>寄存器地址低位</td>
+        <td>寄存器数据高位</td>
+        <td>寄存器字节数低位</td>
+        <td>CRC高位</td>
+        <td>CRC低位</td>
+    </tr>
+</table>
+<p>第1字节从站地址：从站地址码（1～247）<br>
+第2字节0x06 ：写单个寄存器功能码<br>
+第3、4字节：写寄存器的地址<br>
+第5、6字节：写寄存器数据<br>
+第7、8字节：字节1到6的CRC16 校验和</p>
+
+<p><strong>从站正常应答：</strong></p>
+<table>
+    <tr>
+        <th>字节</th>
+        <th>1</th>
+        <th>2</th>
+        <th>3</th>
+        <th>4</th>
+        <th>5</th>
+        <th>6</th>
+        <th>7</th>
+        <th>8</th>
+    </tr>
+    <tr>
+        <td>内容</td>
+        <td>从站地址</td>
+        <td>0x06</td>
+        <td>寄存器地址高位</td>
+        <td>寄存器地址低位</td>
+        <td>寄存器数据高位</td>
+        <td>寄存器字节数低位</td>
+        <td>CRC高位</td>
+        <td>CRC低位</td>
+    </tr>
+</table>
+
+<p><strong>从站异常应答：</strong></p>
+<table>
+    <tr>
+        <th>字节</th>
+        <th>1</th>
+        <th>2</th>
+        <th>3</th>
+        <th>4</th>
+        <th>5</th>
+    </tr>
+    <tr>
+        <td>内容</td>
+        <td>从站地址</td>
+        <td>0x86</td>
+        <td>异常码</td>
+        <td>CRC高位</td>
+        <td>CRC低位</td>
+    </tr>
+</table>
+<p>异常码：0x02表示主站请求地址非法，0x03表示请求数据非法</p>
+
+<h2><a id="33__0x10_66"></a>3.3 写多个寄存器 0x10</h2>
+<p><strong>主站发送：</strong></p>
+<table>
+    <tr>
+        <th>字节</th>
+        <th>1</th>
+        <th>2</th>
+        <th>3</th>
+        <th>4</th>
+        <th>5</th>
+        <th>6</th>
+        <th>7</th>
+        <th>8、9</th>
+        <th>10、11</th>
+        <th>...</th>
+        <th>n-1、n</th>
+        <th>n+1</th>
+        <th>n+2</th>
+    </tr>
+    <tr>
+        <td>内容</td>
+        <td>从站地址</td>
+        <td>0x10</td>
+        <td>寄存器地址高位</td>
+        <td>寄存器地址低位</td>
+        <td>寄存器长度高位</td>
+        <td>寄存器长度低位</td>
+        <td>寄存器字节总数</td>
+        <td>寄存器数据1</td>
+        <td>寄存器数据2</td>
+        <td>...</td>
+        <td>寄存器数据m</td>
+        <td>CRC高位</td>
+        <td>CRC低位</td>
+    </tr>
+</table>
+<p>第1字节从站地址：从站地址码（1～247）<br>
+第2字节0x03 ：应答读功能码<br>
+第3、4字节：写入寄存器地址，3为高位字节，4为低位字节<br>
+第5、6节字：写入寄存器的长度m<br>
+第7节字：从8到n（包括8及n）的字节总数<br>
+第8~n字节：写入的m个寄存器数据，其中m=(n-7)/2，n-1为高位字节，n为低位字节<br>
+第n＋1、n+2字节：字节1到n的 CRC16校验和</p>
+
+<p><strong>从站正常应答：</strong></p>
+<table>
+    <tr>
+        <th>字节</th>
+        <th>1</th>
+        <th>2</th>
+        <th>3</th>
+        <th>4</th>
+        <th>5</th>
+        <th>6</th>
+        <th>7</th>
+        <th>8</th>
+    </tr>
+    <tr>
+        <td>内容</td>
+        <td>从站地址</td>
+        <td>0x10</td>
+        <td>寄存器地址高位</td>
+        <td>寄存器地址低位</td>
+        <td>寄存器长度高位</td>
+        <td>寄存器长度数低位</td>
+        <td>CRC高位</td>
+        <td>CRC低位</td>
+    </tr>
+</table>
+<p>第1字节从站地址：从站地址码（1～247）<br>
+第2字节0x10 ：写多个寄存器功能码<br>
+第3、4字节：写寄存器的地址<br>
+第5、6字节：写寄存器长度<br>
+第7、8字节：字节1到6的CRC16校验和</p>
+
+<p><strong>从站异常应答：</strong></p>
+<table>
+    <tr>
+        <th>字节</th>
+        <th>1</th>
+        <th>2</th>
+        <th>3</th>
+        <th>4</th>
+        <th>5</th>
+    </tr>
+    <tr>
+        <td>内容</td>
+        <td>从站地址</td>
+        <td>0x90</td>
+        <td>异常码</td>
+        <td>CRC高位</td>
+        <td>CRC低位</td>
+    </tr>
+</table>
+<p>异常码：0x02表示主站请求地址非法，0x03表示请求数据非法</p>
+
+<h2><a id="34_ID_0x11_95"></a>3.4 查询总线从机设备ID 0x11</h2>
+<p><strong>主站发送：</strong></p>
+<table>
+    <tr>
+        <th>字节</th>
+        <th>1</th>
+        <th>2</th>
+        <th>3</th>
+        <th>4</th>
+    </tr>
+    <tr>
+        <td>内容</td>
+        <td>从站地址</td>
+        <td>0x11</td>
+        <td>CRC高位</td>
+        <td>CRC低位</td>
+    </tr>
+</table>
+<p>第1字节从站地址：从站地址码（1～247），ID总线上只接一个从设备允许使用0广播ID查询<br>
+第2字节0x11 ：功能码<br>
+第3、4字节：字节1到3的 CRC16校验和</p>
+
+<p><strong>从站正常应答：</strong></p>
+<table>
+    <tr>
+        <th>字节</th>
+        <th>1</th>
+        <th>2</th>
+        <th>3</th>
+        <th>4</th>
+        <th>5</th>
+        <th>6</th>
+        <th>7</th>
+        <th>8</th>
+    </tr>
+    <tr>
+        <td>内容</td>
+        <td>从站地址</td>
+        <td>0x17</td>
+        <td>3</td>
+        <td>从站地址</td>
+        <td>状态码高位</td>
+        <td>状态码低位</td>
+        <td>CRC高位</td>
+        <td>CRC低位</td>
+    </tr>
+</table>
+<p>第1字节从站地址：从站地址码（1～247）<br>
+第2字节0x11 ：功能码<br>
+第3字节：返回有效字节数<br>
+第4字节：从站地址码（1～247）<br>
+第6、7字节：状态码<br>
+第8、9字节：字节1到6的CRC16校验和</p>
+
+<h2><a id="35_ID_0x41_115"></a>3.5 重启指定ID从机设备 0x41</h2>
+<p><strong>主站发送：</strong></p>
+<table>
+    <tr>
+        <th>字节</th>
+        <th>1</th>
+        <th>2</th>
+        <th>3</th>
+        <th>4</th>
+    </tr>
+    <tr>
+        <td>内容</td>
+        <td>从站地址</td>
+        <td>0x41</td>
+        <td>CRC高位</td>
+        <td>CRC低位</td>
+    </tr>
+</table>
+<p>第1字节从站地址：从站地址码（1～247），使用0为广播ID可重启总线上所有从设备<br>
+第2字节0x41 ：功能码<br>
+第3、4字节：字节1到3的 CRC16校验和</p>
+
+</body>
+</html>

@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>舵机SCS通信协议 - FEETECH</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+        body {
+            padding: 20px;
+            background: #f7f8fa;
+            color: #333;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        h1, h2, h3 {
+            margin: 20px 0 12px;
+            color: #222;
+        }
+        h1 {
+            font-size: 24px;
+            text-align: center;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+        h2 {
+            font-size: 20px;
+            border-left: 4px solid #0066cc;
+            padding-left: 10px;
+        }
+        h3 {
+            font-size: 16px;
+        }
+        p {
+            margin: 10px 0;
+        }
+        ul, ol {
+            margin-left: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            background: #fff;
+        }
+        table th, table td {
+            border: 1px solid #ddd;
+            padding: 8px 10px;
+            text-align: left;
+            font-size: 14px;
+        }
+        table th {
+            background: #f2f5fa;
+            font-weight: bold;
+        }
+        pre {
+            background: #f5f5f5;
+            padding: 12px 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 13px;
+            margin: 10px 0;
+        }
+        code {
+            font-family: Consolas, monospace;
+            color: #c7254e;
+        }
+        .hljs-center {
+            text-align: center;
+        }
+        .toc {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+        .toc ul {
+            list-style: none;
+            margin-left: 0;
+        }
+        .toc li {
+            margin: 4px 0;
+        }
+        .toc a {
+            color: #0066cc;
+            text-decoration: none;
+        }
+        .toc a:hover {
+            text-decoration: underline;
+        }
+        .note {
+            color: #666;
+            font-size: 13px;
+            margin: 8px 0;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="hljs-center">
+        <h1><a id="SCS_2"></a>舵机SCS通信协议</h1>
+    </div>
+
+    <div class="toc">
+        <h3>目录</h3>
+        <ul>
+            <li><a href="#SCS_2">舵机SCS通信协议</a></li>
+            <li><a href="#1__9">1 通信协议概要</a></li>
+            <li><a href="#2__16">2 指令帧</a></li>
+            <li><a href="#3__30">3 应答帧</a></li>
+            <li><a href="#4__37">4 指令类型</a>
+                <ul>
+                    <li><a href="#41_PING_53">4.1 查询状态指令PING</a></li>
+                    <li><a href="#42_READ_DATA_79">4.2 读指令READ DATA</a></li>
+                    <li><a href="#43_WRITE_DATA_109">4.3 写指令WRITE DATA</a></li>
+                    <li><a href="#44_REG_WRITE_162">4.4 异步写指令REG WRITE</a></li>
+                    <li><a href="#45_ACTION_196">4.5 执行异步写指令ACTION</a></li>
+                    <li><a href="#46_SYNC_WRITE_212">4.6 同步写指令SYNC WRITE</a></li>
+                    <li><a href="#47_SYNC_READ_249">4.7 同步读指令SYNC READ</a></li>
+                    <li><a href="#48_RESET_284">4.8 状态重置指令RESET</a></li>
+                    <li><a href="#49__296">4.9 位置校准指令</a></li>
+                    <li><a href="#410__336">4.10 参数恢复指令</a></li>
+                    <li><a href="#411__349">4.11 参数备份指令</a></li>
+                    <li><a href="#412__362">4.12 重启指令</a></li>
+                </ul>
+            </li>
+        </ul>
+    </div>
+
+    <h2><a id="1__9"></a>1 通信协议概要</h2>
+    <p>通讯电平采用兼容高速通信的TTL电平方式与具有较强抗干扰能力的RS485方式，通讯仍是采用异步双工，发送与接收信号是异步处理。</p>
+    <p>控制器和舵机之间采用问答方式通信，控制器发出指令帧，舵机返回应答帧。</p>
+    <p>一个总线控制网络中允许有多个舵机，所以每个舵机都分配有一个网络内唯一的ID号。控制器发出的控制指令中包含ID信息，只有匹配上ID号的舵机才能完整接收这条指令，并返回应答信息。</p>
+    <p>通信方式为串行异步方式，一帧数据分为1位起始位，8位数据位和1位停止位，无奇偶校验位，共10位。</p>
+    <p>内存表的部分参数采用两个字节的值域时，两个字节顺序根据舵机型号区分，电位器类型舵机为大端格式（高字节在前低字节在后），磁编码类型舵机为小端格式（低字节在前高字节在后）。每款舵机因功能略有不同，因此实际控制时请参照具体型号的内存表为准。</p>
+
+    <h2><a id="2__16"></a>2 指令帧</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>字头</th>
+                <th>ID号</th>
+                <th>数据长度</th>
+                <th>指令</th>
+                <th>参数</th>
+                <th>校验和</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>0xFF 0xFF</td>
+                <td>ID</td>
+                <td>Length</td>
+                <td>Instruction</td>
+                <td>Parameter1 …Parameter N</td>
+                <td>Check Sum</td>
+            </tr>
+        </tbody>
+    </table>
+    <ul>
+        <li>字头：连续收到两个0xFF，表示有数据包到达。</li>
+        <li>ID号：0～253（0x00～0xFD）；广播ID：254（0xFE）</li>
+        <li>数据长度：参数长度N + 2</li>
+        <li>校验和：Check Sum = ~(ID + Length + Instruction + 参数…)，取低字节</li>
+    </ul>
+
+    <h2><a id="3__30"></a>3 应答帧</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>字头</th>
+                <th>ID号</th>
+                <th>数据长度</th>
+                <th>状态码</th>
+                <th>参数</th>
+                <th>校验和</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>0xFF 0xFF</td>
+                <td>ID</td>
+                <td>Length</td>
+                <td>ERROR</td>
+                <td>Parameter1 …Parameter N</td>
+                <td>Check Sum</td>
+            </tr>
+        </tbody>
+    </table>
+    <p>ERROR=0 表示无错误。</p>
+
+    <h2><a id="4__37"></a>4 指令类型</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>指令</th>
+                <th>功能</th>
+                <th>值</th>
+                <th>参数长度</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td>PING</td><td>查询工作状态</td><td>0x01</td><td>0</td></tr>
+            <tr><td>READ DATA</td><td>读数据</td><td>0x02</td><td>2</td></tr>
+            <tr><td>WRITE DATA</td><td>写数据</td><td>0x03</td><td>≥2</td></tr>
+            <tr><td>REGWRITE DATA</td><td>异步写</td><td>0x04</td><td>≥4</td></tr>
+            <tr><td>ACTION</td><td>执行异步写</td><td>0x05</td><td>0</td></tr>
+            <tr><td>SYNCREAD DATA</td><td>同步读</td><td>0x82</td><td>≥3</td></tr>
+            <tr><td>SYNCWRITE DATA</td><td>同步写</td><td>0x83</td><td>≥2</td></tr>
+            <tr><td>RESET</td><td>重置状态</td><td>0x0A</td><td>0</td></tr>
+            <tr><td>位置校准</td><td>校准位置</td><td>0x0B</td><td>0</td></tr>
+            <tr><td>参数恢复</td><td>恢复参数</td><td>0x06</td><td>0</td></tr>
+            <tr><td>参数备份</td><td>备份参数</td><td>0x09</td><td>0</td></tr>
+            <tr><td>重启指令</td><td>重启舵机</td><td>0x08</td><td>0</td></tr>
+        </tbody>
+    </table>
+
+    <h3><a id="41_PING_53"></a>4.1 PING 查询状态</h3>
+    <p>示例：ID=1</p>
+    <pre>指令帧：FF FF 01 02 01 FB
+应答帧：FF FF 01 02 00 FC</pre>
+
+    <h3><a id="42_READ_DATA_79"></a>4.2 READ DATA 读数据</h3>
+    <p>示例：读ID1当前位置（地址0x38，长度2）</p>
+    <pre>指令帧：FF FF 01 04 02 38 02 BE
+应答帧：FF FF 01 04 00 18 05 DD</pre>
+
+    <h3><a id="43_WRITE_DATA_109"></a>4.3 WRITE DATA 写数据</h3>
+    <p>示例：ID1转到2048，速度1000</p>
+    <pre>指令帧：FF FF 01 09 03 2A 00 08 00 00 E8 03 D5
+应答帧：FF FF 01 02 00 FC</pre>
+
+    <h3><a id="44_REG_WRITE_162"></a>4.4 REG WRITE 异步写</h3>
+    <p>先缓存指令，等待ACTION执行。</p>
+
+    <h3><a id="45_ACTION_196"></a>4.5 ACTION 执行异步写</h3>
+    <pre>指令帧：FF FF FE 02 05 FA（广播无应答）</pre>
+
+    <h3><a id="46_SYNC_WRITE_212"></a>4.6 SYNC WRITE 同步写</h3>
+    <p>一条指令控制多舵机同时动作。</p>
+
+    <h3><a id="47_SYNC_READ_249"></a>4.7 SYNC READ 同步读</h3>
+    <p>一次读取多个舵机数据。</p>
+
+    <h3><a id="48_RESET_284"></a>4.8 RESET 状态重置</h3>
+    <pre>指令帧：FF FF 01 02 0A F2</pre>
+
+    <h3><a id="49__296"></a>4.9 位置校准</h3>
+    <p>无参数：校准中位；有参数：校准到指定值。</p>
+    <table>
+        <tr><th>型号</th><th>固件</th><th>支持</th></tr>
+        <tr><td>SMS</td><td>≤2.54</td><td>是</td></tr>
+        <tr><td>STS</td><td>≥3.10</td><td>是</td></tr>
+        <tr><td>HLS</td><td>≥3.43</td><td>是</td></tr>
+    </table>
+
+    <h3><a id="410__336"></a>4.10 参数恢复</h3>
+    <pre>FF FF 01 02 06 F6</pre>
+
+    <h3><a id="411__349"></a>4.11 参数备份</h3>
+    <pre>FF FF 01 02 09 F3</pre>
+
+    <h3><a id="412__362"></a>4.12 重启指令</h3>
+    <pre>FF FF 01 02 08 F4（无应答）</pre>
+    <p class="note">重启前请先关闭扭矩开关。</p>
+</div>
+</body>
+</html>

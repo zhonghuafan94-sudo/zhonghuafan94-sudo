@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CAN2.0A转FTSCS1.0通讯协议 - FEETECH</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;font-family:Arial,"Microsoft YaHei",sans-serif;}
+        body{padding:20px;background-color:#f5f5f5;color:#333;line-height:1.6;}
+        .container{max-width:1200px;margin:0 auto;background:#fff;padding:30px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.05);}
+        h1{font-size:22px;font-weight:bold;margin-bottom:20px;color:#222;border-bottom:1px solid #eee;padding-bottom:10px;}
+        h2{font-size:18px;margin:25px 0 15px;color:#222;}
+        h3{font-size:16px;margin:20px 0 10px;color:#333;}
+        p{margin:10px 0;text-indent:2em;}
+        table{width:100%;border-collapse:collapse;margin:15px 0;background:#fff;}
+        table,th,td{border:1px solid #ddd;}
+        th,td{padding:8px 12px;text-align:left;font-size:14px;}
+        th{background-color:#f8f8f8;font-weight:bold;}
+        tr:hover{background-color:#fafafa;}
+        .code{font-family:Consolas,monospace;background:#f7f7f7;padding:2px 4px;border-radius:3px;}
+        .note{color:#666;font-size:13px;margin-top:5px;}
+        .product-list{margin-bottom:30px;}
+        .product-list table{margin-bottom:10px;}
+        .divider{height:1px;background:#eee;margin:30px 0;}
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <h1>CAN2.0A转FTSCS1.0 协议</h1>
+
+        <h2>1、协议概述</h2>
+        <p>本协议是基于CAN2.0A标准数据帧，自定义通信指令转换成FTSCS1.0自定义协议，以便于FEETECH 所有自定义协议总线舵机与CAN总线设备配合使用。</p>
+        <p>使用CAN2.0A标准数据帧通信，出厂CAN默认波特率为1M，波特率可配置范围100K~1M，出厂默认通信CAN站号配置为1，CAN波特率、通信站号地址可通过CAN指令进行设置。由于FTSCS1.0协议基于485/TTL，所以CAN转换器需要遵守一问一答的通信规则否则会导致485/TTL总线出现数据冲突情况。</p>
+        <p>本转换协议需基于FEETECH 特定转换模块（如CAN2.0A 转TTL 单总线模块）来配合使用实现通讯转换功能。</p>
+
+        <h2>2、CAN2.0A帧格式</h2>
+        <table>
+            <tr>
+                <th>CAN-ID</th>
+                <th>DLC</th>
+                <th>数据1 数据2 ... 数据n</th>
+            </tr>
+            <tr>
+                <td>11位CAN-ID</td>
+                <td>数据长度，取值范围0~8</td>
+                <td>每个数据1字节，n&lt;=8</td>
+            </tr>
+        </table>
+
+        <h3>CAN-ID结构：</h3>
+        <table>
+            <tr>
+                <th>CAN-ID</th>
+                <th>BIT10 ... BIT6</th>
+                <th>BIT5 ... BIT0</th>
+            </tr>
+            <tr>
+                <td></td>
+                <td>CAN指令码</td>
+                <td>CAN站点地址</td>
+            </tr>
+        </table>
+        <p>- BIT5 ~ BIT0：CAN站号，范围0 ~ 63，其中0为广播地址，1 ~ 63为单播地址</p>
+        <p>- BIT10 ~ BIT6：CAN指令码，用来表示接下来发送的CAN报文功能作用</p>
+
+        <h3>CAN指令码:</h3>
+        <table>
+            <tr>
+                <th>指令码</th>
+                <th>功能解释</th>
+                <th>CAN-ID</th>
+                <th>说明</th>
+            </tr>
+            <tr><td>0x01</td><td>内存表读指令</td><td>0x080+CAN站号</td><td></td></tr>
+            <tr><td>0x02</td><td>内存表写指令</td><td>0x100+CAN站号</td><td></td></tr>
+            <tr><td>0x03</td><td>位置控制指令</td><td>0x180+CAN站号</td><td></td></tr>
+            <tr><td>0x04</td><td>同步读指令</td><td>0x200+CAN站号</td><td></td></tr>
+            <tr><td>0x05</td><td>异步控制指令</td><td>0x280+CAN站号</td><td></td></tr>
+            <tr><td>0x06</td><td>异步执行指令</td><td>0x300+CAN站号</td><td></td></tr>
+            <tr><td>0x07</td><td>同步控制指令</td><td>0x380+CAN站号</td><td></td></tr>
+            <tr><td>0x08</td><td>同步执行指令</td><td>0x400+CAN站号</td><td></td></tr>
+            <tr><td>0x09</td><td>舵机应答指令</td><td>0x480+CAN站号</td><td>用到表示舵机应答的数据</td></tr>
+            <tr><td>0x0A</td><td>CAN配置指令</td><td>0x500+CAN站号</td><td></td></tr>
+            <tr><td>0x0B</td><td>舵机校准指令</td><td>0x580+CAN站号</td><td></td></tr>
+        </table>
+
+        <h3>2.1 内存表读指令(0x01)</h3>
+        <p>使用内存表读指令对舵机内存表进行读查询，一次最多能读6字节数据。</p>
+        <table>
+            <tr>
+                <th></th>
+                <th>CAN-ID</th>
+                <th>DLC</th>
+                <th>数据</th>
+            </tr>
+            <tr>
+                <td>发送</td>
+                <td>0x080+CAN站号</td>
+                <td>3</td>
+                <td>舵机ID(1字节)、内存表地址(1字节)、内存表长度N(1字节，N&lt;=6)</td>
+            </tr>
+            <tr>
+                <td>应答</td>
+                <td>0x480+CAN站号</td>
+                <td>N+2</td>
+                <td>舵机ID(1字节)、舵机状态(1字节)、内存表数据1(1字节) … 内存表数据N(1字节)</td>
+            </tr>
+        </table>
+
+        <h3>2.2 内存表写指令(0x02)</h3>
+        <p>使用内存表写指令对舵机内存表进行写数据，一次最多能写6字节数据。</p>
+        <table>
+            <tr>
+                <th></th>
+                <th>CAN-ID</th>
+                <th>DLC</th>
+                <th>数据</th>
+            </tr>
+            <tr>
+                <td>发送</td>
+                <td>0x100+CAN站号</td>
+                <td>N+2</td>
+                <td>舵机ID(1字节)、内存表地址(1字节)、内存表数据1(1字节) … 内存表数据N(1字节，N&lt;=6)</td>
+            </tr>
+            <tr>
+                <td>应答</td>
+                <td>0x480+CAN站号</td>
+                <td>2</td>
+                <td>舵机ID(1字节)、舵机状态(1字节)</td>
+            </tr>
+        </table>
+
+        <h3>2.3 位置控制指令(0x03)</h3>
+        <p>位置控制指令控制舵机位置，输入指令包括：舵机ID(1字节)、位置(2字节)、加速度(1字节)、速度(2字节)与运行电流(2字节)。</p>
+        <table>
+            <tr>
+                <th></th>
+                <th>CAN-ID</th>
+                <th>DLC</th>
+                <th>数据</th>
+            </tr>
+            <tr>
+                <td>发送</td>
+                <td>0x180+CAN站号</td>
+                <td>8</td>
+                <td>舵机ID(1字节)、目标位置(2字节)、运行加速度(1字节)、运行速度(2字节)、运行电流(2字节)</td>
+            </tr>
+            <tr>
+                <td>应答</td>
+                <td>0x480+CAN站号</td>
+                <td>2</td>
+                <td>舵机ID(1字节)、舵机状态(1字节)</td>
+            </tr>
+        </table>
+
+        <h3>2.4 同步读指令(0x04)</h3>
+        <p>同步读指令，可同于最多同时读取6个舵机的内存表数据。</p>
+        <table>
+            <tr>
+                <th></th>
+                <th>CAN-ID</th>
+                <th>DLC</th>
+                <th>数据</th>
+            </tr>
+            <tr>
+                <td>发送</td>
+                <td>0x200+CAN站号</td>
+                <td>n+2</td>
+                <td>内存表地址(1字节)、内存表长度N(1字节，N&lt;=6)、舵机ID1(1字节) ... 舵机IDn(1字节，n&lt;=6)</td>
+            </tr>
+            <tr>
+                <td>应答</td>
+                <td>0x480+CAN站号</td>
+                <td>N+2</td>
+                <td>舵机ID(1字节)、舵机状态(1字节)、内存表数据1(1字节) … 内存表数据N(1字节)</td>
+            </tr>
+        </table>
+
+        <h3>2.5 异步控制指令(0x05)</h3>
+        <p>异步控制指令用于异步控制舵机位置，输入指令包括：舵机ID(1字节)、输入指令包括位置(2字节)、加速度(1字节)、速度(2字节)与运行电流(2字节)。</p>
+        <table>
+            <tr>
+                <th></th>
+                <th>CAN-ID</th>
+                <th>DLC</th>
+                <th>数据</th>
+            </tr>
+            <tr>
+                <td>发送</td>
+                <td>0x280+CAN站号</td>
+                <td>8</td>
+                <td>舵机ID(1字节)、目标位置(2字节)、运行加速度(1字节)、运行速度(2字节)、运行电流(2字节)</td>
+            </tr>
+            <tr>
+                <td>应答</td>
+                <td>0x480+CAN站号</td>
+                <td>2</td>
+                <td>舵机ID(1字节)、舵机状态(1字节)</td>
+            </tr>
+        </table>
+
+        <h3>2.6 异步执行指令(0x06)</h3>
+        <p>异步执行指令用于执行缓存的异步控制指令。</p>
+        <table>
+            <tr>
+                <th></th>
+                <th>CAN-ID</th>
+                <th>DLC</th>
+                <th>数据</th>
+            </tr>
+            <tr>
+                <td>发送</td>
+                <td>0x300+CAN站号</td>
+                <td>0</td>
+                <td>无</td>
+            </tr>
+        </table>
+
+        <h3>2.7 同步控制指令(0x07)</h3>
+        <p>同步控制指令用于同步控制舵机位置，输入指令包括：舵机ID(1字节)、输入指令包括位置(2字节)、加速度(1字节)、速度(2字节)与运行电流(2字节)，输入指令先缓存于CAN转换器中，接收同步执行指令后再转换成舵机同步控制指令输出。</p>
+        <table>
+            <tr>
+                <th></th>
+                <th>CAN-ID</th>
+                <th>DLC</th>
+                <th>数据</th>
+            </tr>
+            <tr>
+                <td>发送</td>
+                <td>0x380+CAN站号</td>
+                <td>8</td>
+                <td>舵机ID(1字节)、目标位置(2字节)、运行加速度(1字节)、运行速度(2字节)、运行电流(2字节)</td>
+            </tr>
+        </table>
+
+        <h3>2.8 同步执行指令(0x08)</h3>
+        <p>CAN转换器接收同步执行后，将缓存的同步控制指令转换成舵机同步控制指令输出。</p>
+        <p><strong>执行指令：</strong></p>
+        <table>
+            <tr>
+                <th></th>
+                <th>CAN-ID</th>
+                <th>DLC</th>
+                <th>数据</th>
+            </tr>
+            <tr>
+                <td>发送</td>
+                <td>0x400+CAN站号</td>
+                <td>0</td>
+                <td>无</td>
+            </tr>
+        </table>
+        <p><strong>清除指令：</strong></p>
+        <table>
+            <tr>
+                <th></th>
+                <th>CAN-ID</th>
+                <th>DLC</th>
+                <th>数据</th>
+            </tr>
+            <tr>
+                <td>发送</td>
+                <td>0x400+CAN站号</td>
+                <td>1</td>
+                <td>0</td>
+            </tr>
+        </table>
+        <p><strong>查询指令：</strong></p>
+        <table>
+            <tr>
+                <th></th>
+                <th>CAN-ID</th>
+                <th>DLC</th>
+                <th>数据</th>
+            </tr>
+            <tr>
+                <td>发送</td>
+                <td>0x400+CAN站号</td>
+                <td>1</td>
+                <td>1</td>
+            </tr>
+            <tr>
+                <td>应答</td>
+                <td>0x400+CAN站号</td>
+                <td>1</td>
+                <td>缓存指令数量(1字节)</td>
+            </tr>
+        </table>
+
+        <h3>2.9 CAN配置指令(0x0A)</h3>
+        <table>
+            <tr>
+                <th></th>
+                <th>CAN-ID</th>
+                <th>DLC</th>
+                <th>数据</th>
+            </tr>
+            <tr>
+                <td>发送</td>
+                <td>0x500+CAN站号</td>
+                <td>3</td>
+                <td>CAN波特率(1字节)、CAN站号(1字节)、舵机波特率(1字节)</td>
+            </tr>
+            <tr>
+                <td>应答</td>
+                <td>0x500+CAN站号</td>
+                <td>8</td>
+                <td>波特率(1字节)、CAN站号(1字节)、舵机波特率(1字节)、预留(1字节)、固件版本(1字节)、固件发布年(1字节)、固件分布月(1字节)、固件发布日(1字节)</td>
+            </tr>
+        </table>
+        <p>CAN站号：1 ~ 63</p>
+        <p>舵机波特率：0 ~ 3，0表示1M、1表示500k、2表示250k、3表示115200</p>
+        <p>CAN波特率：0 ~3，0表示1M、1表示500k、2表示250k、3表示100k</p>
+        <p><strong>返回CAN配置信息：</strong></p>
+        <table>
+            <tr>
+                <th></th>
+                <th>CAN-ID</th>
+                <th>DLC</th>
+                <th>数据</th>
+            </tr>
+            <tr>
+                <td>发送</td>
+                <td>0x500+CAN站号</td>
+                <td>0</td>
+                <td>无</td>
+            </tr>
+            <tr>
+                <td>应答</td>
+                <td>0x500+CAN站号</td>
+                <td>8</td>
+                <td>波特率(1字节)、CAN站号(1字节)、舵机波特率(1字节)、预留(1字节)、固件版本(1字节)、固件发布年(1字节)、固件分布月(1字节)、固件发布日(1字节)</td>
+            </tr>
+        </table>
+        <p class="note">备注：配置修改后重启生效</p>
+
+        <h3>2.10 舵机校准指令(0x0B)</h3>
+        <p><strong>当前位置重校准为设定值：</strong></p>
+        <table>
+            <tr>
+                <th></th>
+                <th>CAN-ID</th>
+                <th>DLC</th>
+                <th>数据</th>
+            </tr>
+            <tr>
+                <td>发送</td>
+                <td>0x580+CAN站号</td>
+                <td>3</td>
+                <td>舵机ID(1字节)、校准位置(2字节)</td>
+            </tr>
+            <tr>
+                <td>应答</td>
+                <td>0x480+CAN站号</td>
+                <td>2</td>
+                <td>舵机ID(1字节)、舵机状态(1字节)</td>
+            </tr>
+        </table>
+        <p><strong>当前位置校准为中位：</strong></p>
+        <table>
+            <tr>
+                <th></th>
+                <th>CAN-ID</th>
+                <th>DLC</th>
+                <th>数据</th>
+            </tr>
+            <tr>
+                <td>发送</td>
+                <td>0x580+CAN站号</td>
+                <td>1</td>
+                <td>舵机ID(1字节)</td>
+            </tr>
+            <tr>
+                <td>应答</td>
+                <td>0x480+CAN站号</td>
+                <td>2</td>
+                <td>舵机ID(1字节)、舵机状态(1字节)</td>
+            </tr>
+        </table>
+    </div>
+</body>
+</html>

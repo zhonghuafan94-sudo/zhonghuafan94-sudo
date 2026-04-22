@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>磁编码SMSMB舵机-内存表解析</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:"Microsoft YaHei",sans-serif;}
+body{padding:20px;background:#fff;color:#333;line-height:1.6;font-size:14px;}
+h1{font-size:24px;margin:20px 0;font-weight:bold;text-align:center;}
+h2{font-size:18px;margin:16px 0 10px;font-weight:bold;}
+h3{font-size:16px;margin:12px 0 8px;font-weight:bold;}
+table{width:100%;border-collapse:collapse;margin:10px 0 16px;table-layout:fixed;}
+table th,table td{border:1px solid #ddd;padding:8px 6px;text-align:left;word-break:break-all;}
+table th{background:#f5f7fa;font-weight:bold;}
+ul{margin-left:20px;margin-bottom:10px;}
+li{margin-bottom:4px;}
+.tip{padding:8px 16px;background:#fff9e9;border-left:5px solid #fbc302;border-radius:4px;margin:15px 0;}
+.toc{margin:15px 0;padding:10px;background:#f8f9fa;border-radius:4px;}
+.toc a{display:block;margin:4px 0;color:#0066cc;text-decoration:none;}
+</style>
+</head>
+<body>
+
+<h1>磁编码SMSMB舵机-内存表解析</h1>
+
+<div class="toc">
+<p><strong>目录</strong></p>
+<a href="#1">1 舵机通信协议</a>
+<a href="#2">2 舵机内存表定义</a>
+<a href="#2-1">2.1 版本信息</a>
+<a href="#2-2">2.2 EPROM配置</a>
+<a href="#2-3">2.3 SRAM控制</a>
+<a href="#2-4">2.4 SRAM反馈</a>
+<a href="#2-5">2.5 出厂参数</a>
+<a href="#3">3 特殊字节解释</a>
+<a href="#3-1">3.1 舵机相位</a>
+<a href="#3-2">3.2 舵机状态</a>
+<a href="#3-3">3.3 保护开关</a>
+<a href="#3-4">3.4 LED报警条件</a>
+<a href="#3-5">3.5 故障复位</a>
+</div>
+
+<h2 id="1">1 舵机通信协议</h2>
+<p>舵机使用MODBUS-RTU标准协议，出厂时的串口默认配置，波特率默认为115200，数据位 8，无校验，停止位 1；波特率可配置范围9600~256Kbps，默认通信地址（站号）为1。</p>
+
+<h2 id="2">2 舵机内存表定义</h2>
+
+<h3 id="2-1">2.1 版本信息</h3>
+<table>
+<tr>
+<th>地址DEC</th><th>地址HEX</th><th>地址PLC</th><th>功能名称</th><th>字节数</th><th>初始值</th><th>权限</th><th>取值范围</th><th>单位</th><th>说明</th>
+</tr>
+<tr>
+<td>0</td><td>0x0</td><td>40001</td><td>固件版本号</td><td>2</td><td>–</td><td>只读</td><td></td><td></td><td></td>
+</tr>
+<tr>
+<td>1</td><td>0x1</td><td>40002</td><td>伺服版本号</td><td>2</td><td>–</td><td>只读</td><td></td><td></td><td></td>
+</tr>
+<tr>
+<td>2</td><td>0x2</td><td>40003</td><td>固件发布日期(年)</td><td>2</td><td>–</td><td>只读</td><td></td><td></td><td></td>
+</tr>
+<tr>
+<td>3</td><td>0x3</td><td>40004</td><td>固件发布日期(月)</td><td>2</td><td>–</td><td>只读</td><td></td><td></td><td></td>
+</tr>
+</table>
+
+<h3 id="2-2">2.2 EPROM配置</h3>
+<table>
+<tr>
+<th>地址DEC</th><th>地址HEX</th><th>地址PLC</th><th>功能名称</th><th>字节数</th><th>初始值</th><th>权限</th><th>取值范围</th><th>单位</th><th>说明</th>
+</tr>
+<tr>
+<td>10</td><td>0x0A</td><td>40011</td><td>ID</td><td>2</td><td>1</td><td>读写</td><td>1 ~ 247</td><td>号</td><td>总线上唯一的身份识别码，同一总线不可出现重复ID号，0号(0x00)为广播ID</td>
+</tr>
+<tr>
+<td>11</td><td>0x0B</td><td>40012</td><td>波特率</td><td>2</td><td>2</td><td>读写</td><td>0 ~ 9</td><td>无</td><td>0-9分别代表波特率：256000(0)，128000(1)，115200(2)，57600(3)，56000(4)，38400(5)，19200(6)，14400(7)，9600(8)，4800(9)</td>
+</tr>
+<tr>
+<td>12</td><td>0x0C</td><td>40013</td><td>返回延时</td><td>2</td><td>500</td><td>读写</td><td>0 ~ 500</td><td>1us</td><td>0表示最少返回延时，最大可设置返回延时500us</td>
+</tr>
+<tr>
+<td>13</td><td>0x0D</td><td>40014</td><td>最小角度限制</td><td>2</td><td>0</td><td>读写</td><td>0 ~ 4095</td><td>0.0879度</td><td>设置运动行程最小值限制，取值小于最大角度限制，多圈绝对位置控制时此值为0</td>
+</tr>
+<tr>
+<td>14</td><td>0x0E</td><td>40015</td><td>最大角度限制</td><td>2</td><td>4095</td><td>读写</td><td>0 ~ 4095</td><td>0.0879度</td><td>设置运动行程最大值限制，取值大于最小角度限制，多圈绝对位置控制时此值为0</td>
+</tr>
+<tr>
+<td>15</td><td>0x0F</td><td>40016</td><td>位置校正</td><td>2</td><td>0</td><td>读写</td><td>-2047 ~ 2047</td><td>0.0879度</td><td>校正表示范围为-2047~2047，故障复位（134）写4自动计算中位（2048）校正值后存储于此地址</td>
+</tr>
+<tr>
+<td>16</td><td>0x10</td><td>40017</td><td>运行模式</td><td>2</td><td>0</td><td>读写</td><td>0 ~ 4</td><td>无</td><td>0:伺服模式 1:恒速模式 2:预留 3:特殊模式（到目标位置自动关闭扭矩） 4:步进模式</td>
+</tr>
+<tr>
+<td>17</td><td>0x11</td><td>40018</td><td>位置闭环P 比例系数</td><td>2</td><td>–</td><td>读写</td><td>0 ~ 254</td><td>无</td><td>控制电机的比例系数</td>
+</tr>
+<tr>
+<td>18</td><td>0x12</td><td>40019</td><td>位置闭环D 微分系数</td><td>2</td><td>–</td><td>读写</td><td>0 ~ 254</td><td>无</td><td>控制电机的微分系数</td>
+</tr>
+<tr>
+<td>19</td><td>0x13</td><td>40020</td><td>位置闭环I 积分系数</td><td>2</td><td>0</td><td>读写</td><td>0 ~ 254</td><td>无</td><td>控制电机的积分系数</td>
+</tr>
+<tr>
+<td>20</td><td>0x14</td><td>40021</td><td>速度闭环P 比例系数</td><td>2</td><td>–</td><td>读写</td><td>0 ~ 254</td><td>无</td><td>电机恒速模式（模式1）下，速度环比例系数</td>
+</tr>
+<tr>
+<td>21</td><td>0x15</td><td>40022</td><td>速度闭环 I积分系数</td><td>2</td><td>–</td><td>读写</td><td>0 ~ 254</td><td>无</td><td>电机恒速模式（模式1）下，速度环积分系数</td>
+</tr>
+</table>
+
+<h3 id="2-3">2.3 SRAM控制</h3>
+<table>
+<tr>
+<th>地址DEC</th><th>地址HEX</th><th>地址PLC</th><th>功能名称</th><th>字节数</th><th>初始值</th><th>权限</th><th>取值范围</th><th>单位</th><th>说明</th>
+</tr>
+<tr>
+<td>128</td><td>0x80</td><td>40129</td><td>目标位置</td><td>2</td><td>0</td><td>读写</td><td>-32768 ~ 32767</td><td>0.0879度</td><td>绝对位置控制方式，最大对应最大有效角度</td>
+</tr>
+<tr>
+<td>129</td><td>0x81</td><td>40130</td><td>扭矩开关</td><td>2</td><td>0</td><td>读写</td><td>0 ~ 1</td><td>无</td><td>写0：关闭扭力输出；写1：打开扭力输出</td>
+</tr>
+<tr>
+<td>130</td><td>0x82</td><td>40131</td><td>加速度</td><td>2</td><td>加速度默认值</td><td>读写</td><td>0 ~ 65535</td><td>8.79度/秒²</td><td>如设置为0则按舵机最大加速度变速，上电由“加速度默认值（405）”赋值</td>
+</tr>
+<tr>
+<td>131</td><td>0x83</td><td>40132</td><td>运行速度</td><td>2</td><td>速度默认值</td><td>读写</td><td>0 ~ 65535</td><td>0.732RPM</td><td>上电由“速度默认值（406）”赋值</td>
+</tr>
+<tr>
+<td>132</td><td>0x84</td><td>40133</td><td>扭矩限制</td><td>2</td><td>扭矩限制默认值</td><td>读写</td><td>0 ~ 1000</td><td>0.1%</td><td>上电初始值会由扭矩限制默认值（0x194）赋值，用户可程序修改此值来控制最大扭矩的输出，注意设置此扭矩限制值会同时影响转动速度，线性比例减小最高空载转速</td>
+</tr>
+<tr>
+<td>133</td><td>0x85</td><td>40134</td><td>锁标志</td><td>2</td><td>1</td><td>读写</td><td>0 ~ 1/128</td><td>无</td><td>写0关闭EPROM写入锁，写入EPROM地址的值掉电保存；写1打开写入锁，写入EPROM地址的值掉电不保存；写128关闭出厂参数写入锁</td>
+</tr>
+<tr>
+<td>134</td><td>0x86</td><td>40135</td><td>故障复位</td><td>2</td><td>0</td><td>读写</td><td>0 ~ 65535</td><td>无</td><td>对应位被置1复位相应故障，复位成功相应位被置0，详见特殊字节位解析</td>
+</tr>
+</table>
+
+<h3 id="2-4">2.4 SRAM反馈</h3>
+<table>
+<tr>
+<th>地址DEC</th><th>地址HEX</th><th>地址PLC</th><th>功能名称</th><th>字节数</th><th>初始值</th><th>权限</th><th>取值范围</th><th>单位</th><th>说明</th>
+</tr>
+<tr>
+<td>256</td><td>0x100</td><td>40257</td><td>伺服状态</td><td>2</td><td>0</td><td>只读</td><td>–</td><td>无</td><td>对应位被置1表示相应错误出现，详见特殊字节位解析</td>
+</tr>
+<tr>
+<td>257</td><td>0x101</td><td>40258</td><td>当前位置</td><td>2</td><td>0</td><td>只读</td><td>–</td><td>0.0879度</td><td>反馈当前所处位置；绝对位置控制方式，最大值对应最大有效角度</td>
+</tr>
+<tr>
+<td>258</td><td>0x102</td><td>40259</td><td>当前速度</td><td>2</td><td>0</td><td>只读</td><td>–</td><td>0.732RPM</td><td>反馈当前电机转动的速度</td>
+</tr>
+<tr>
+<td>259</td><td>0x103</td><td>40260</td><td>输出PWM</td><td>2</td><td>0</td><td>只读</td><td>–</td><td>0.1%</td><td>当前控制输出驱动电机的电压占空比</td>
+</tr>
+<tr>
+<td>260</td><td>0x104</td><td>40261</td><td>当前电压</td><td>2</td><td>0</td><td>只读</td><td>–</td><td>0.1V</td><td>当前舵机工作电压</td>
+</tr>
+<tr>
+<td>261</td><td>0x105</td><td>40262</td><td>当前温度</td><td>2</td><td>0</td><td>只读</td><td>–</td><td>°C</td><td>当前舵机内部工作温度</td>
+</tr>
+<tr>
+<td>262</td><td>0x106</td><td>40263</td><td>移动标志</td><td>2</td><td>0</td><td>只读</td><td>–</td><td>无</td><td>舵机在运动时标志为1，舵机到达目标并且停止时为0</td>
+</tr>
+<tr>
+<td>263</td><td>0x107</td><td>40264</td><td>当前电流</td><td>2</td><td>0</td><td>只读</td><td>–</td><td>6.5mA</td><td>最大可测量电流为 500 * 6.5mA= 3250mA</td>
+</tr>
+</table>
+
+<h3 id="2-5">2.5 出厂参数</h3>
+<table>
+<tr>
+<th>地址DEC</th><th>地址HEX</th><th>地址PLC</th><th>功能名称</th><th>字节数</th><th>初始值</th><th>权限</th><th>取值范围</th><th>单位</th><th>说明</th>
+</tr>
+<tr>
+<td>384</td><td>0x180</td><td>40385</td><td>移动检测阀值</td><td>2</td><td>–</td><td>默认</td><td>–</td><td>无</td><td>舵机出厂默认参数</td>
+</tr>
+<tr>
+<td>385</td><td>0x181</td><td>40386</td><td>D 控制时间</td><td>2</td><td>–</td><td>默认</td><td>–</td><td>无</td><td>舵机出厂默认参数</td>
+</tr>
+<tr>
+<td>386</td><td>0x182</td><td>40387</td><td>最大速度限制</td><td>2</td><td>–</td><td>默认</td><td>0 ~ 32767</td><td>0.732RPM</td><td>舵机出厂默认参数</td>
+</tr>
+<tr>
+<td>387</td><td>0x183</td><td>40388</td><td>H桥死区时间</td><td>2</td><td>–</td><td>默认</td><td></td><td></td><td>舵机出厂默认参数</td>
+</tr>
+<tr>
+<td>388</td><td>0x184</td><td>40389</td><td>加速度限制</td><td>2</td><td>–</td><td>默认</td><td>0 ~ 65535</td><td>8.79度/秒²</td><td>舵机出厂默认参数</td>
+</tr>
+<tr>
+<td>389</td><td>0x185</td><td>40390</td><td>启动扭矩</td><td>2</td><td>–</td><td>默认</td><td>0 ~ 1000</td><td>0.1%</td><td>设置舵机的最小输出启动扭矩，设1000 = 100% * 堵转扭力</td>
+</tr>
+<tr>
+<td>390</td><td>0x186</td><td>40391</td><td>顺时针不灵敏区</td><td>2</td><td>–</td><td>默认</td><td>0 ~ 32</td><td>0.0879度</td><td></td>
+</tr>
+<tr>
+<td>391</td><td>0x187</td><td>40392</td><td>逆时针不灵敏区</td><td>2</td><td>–</td><td>默认</td><td>0 ~ 32</td><td>0.0879度</td><td></td>
+</tr>
+<tr>
+<td>392</td><td>0x188</td><td>40393</td><td>相位</td><td>2</td><td>–</td><td>默认</td><td>0 ~ 255</td><td>无</td><td>特殊功能字节，无特别需求不可修改，详见特殊字节位解析</td>
+</tr>
+<tr>
+<td>393</td><td>0x189</td><td>40394</td><td>保护开关</td><td>2</td><td>–</td><td>默认</td><td>0 ~ 255</td><td>无</td><td>对应位设置1为开启相应保护，对应位设置0为关闭相应保护，详见特殊字节位解析</td>
+</tr>
+<tr>
+<td>394</td><td>0x18A</td><td>40395</td><td>LED报警条件</td><td>2</td><td>–</td><td>默认</td><td>0 ~ 255</td><td>无</td><td>对应位设置1为开启闪灯报警，对应位设置0为关闭闪灯报警，详见特殊字节位解析</td>
+</tr>
+<tr>
+<td>395</td><td>0x18B</td><td>40396</td><td>最高温度上限</td><td>2</td><td>–</td><td>默认</td><td>0 ~ 100</td><td>°C</td><td>最高工作温度限制，如设置为70 则最高温度为70摄氏度，设置精度为1摄氏度</td>
+</tr>
+<tr>
+<td>396</td><td>0x18C</td><td>40397</td><td>最高输入电压</td><td>2</td><td>–</td><td>默认</td><td>最低输入电压 ~ 360</td><td>0.1V</td><td>最高输入电压如设置为80，则最高工作电压限制为8.0V，设置精度为0.1V</td>
+</tr>
+<tr>
+<td>397</td><td>0x18D</td><td>40398</td><td>最低输入电压</td><td>2</td><td>–</td><td>默认</td><td>0 ~ 最高输入电压</td><td>0.1V</td><td>最低输入电压如设置为40，则最低工作电压限制为4.0V，设置精度为0.1V</td>
+</tr>
+<tr>
+<td>398</td><td>0x18E</td><td>40400</td><td>过载电流</td><td>2</td><td>–</td><td>默认</td><td>0 ~ 511</td><td>6.5mA</td><td>舵机工作过载保护电流</td>
+</tr>
+<tr>
+<td>399</td><td>0x18F</td><td>40401</td><td>过流保护时间</td><td>2</td><td>–</td><td>默认</td><td>0 ~ 5000</td><td>1ms</td><td>工作电流超出过载电流的最长工作时间</td>
+</tr>
+<tr>
+<td>400</td><td>0x190</td><td>40402</td><td>保护扭矩</td><td>2</td><td>–</td><td>默认</td><td>0 ~ 1000</td><td>0.1%</td><td>进入过载保护后输出扭矩，如设200表示20%的最大扭矩</td>
+</tr>
+<tr>
+<td>401</td><td>0x191</td><td>40403</td><td>过载扭矩</td><td>2</td><td>–</td><td>默认</td><td>0 ~ 1000</td><td>0.1%</td><td>启动过载保护的最大扭力阀值，如设800表示80%的最大扭矩</td>
+</tr>
+<tr>
+<td>402</td><td>0x192</td><td>40404</td><td>过载保护时间</td><td>2</td><td>–</td><td>默认</td><td>0 ~ 5000</td><td>1ms</td><td>舵机扭矩超出过载扭矩的最长工作时间</td>
+</tr>
+<tr>
+<td>403</td><td>0x193</td><td>40405</td><td>角度分辨率</td><td>2</td><td>1</td><td>默认</td><td>1 ~ 128</td><td>无</td><td>对传感器最小分辨角度的放大系数，修改此值可以扩展控制圈数</td>
+</tr>
+<tr>
+<td>404</td><td>0x194</td><td>40406</td><td>扭矩限制默认值</td><td>2</td><td>1000</td><td>默认</td><td>0 ~ 1000</td><td>0.1%</td><td>扭矩限制上电默认值</td>
+</tr>
+<tr>
+<td>405</td><td>0x195</td><td>40407</td><td>加速度默认值</td><td>2</td><td>–</td><td>默认</td><td>0 ~ 65535</td><td>8.79度/秒²</td><td>加速度上电默认值</td>
+</tr>
+<tr>
+<td>406</td><td>0x196</td><td>40408</td><td>速度默认值</td><td>2</td><td>–</td><td>默认</td><td>0 ~ 32767</td><td>0.732RPM</td><td>速度上电默认值</td>
+</tr>
+</table>
+
+<h2 id="3">3 特殊字节解释</h2>
+
+<h3 id="3-1">3.1 舵机相位</h3>
+<ul>
+<li><strong>位数/位权重：说明</strong></li>
+<li>BIT0（1）：驱动方向相位；(0)正向，(1)反向</li>
+<li>BIT1（2）：驱动桥模式；(0)无刷，(1)有刷，重启生效</li>
+<li>BIT2（4）：扭矩自动开关；(0)自动开启，(1)指令开启，固件>=20.9版本</li>
+<li>BIT3（8）：状态自动复位；(0)自动复位，(1)指令复位，固件>=20.9版本</li>
+<li>BIT4（16）：角度反馈模式；(0)反馈单圈角度，(1)反馈全角度</li>
+<li>BIT5（32）：----</li>
+<li>BIT6（64）：PWM频率，(0)24kHz，(1)16kHz</li>
+<li>BIT7（128）：位置反馈方向相位，(0)正向，(1)反向</li>
+</ul>
+<div class="tip">
+如果同时设置多个位，舵机的相位值为各个位值之和。例如：原相位值为0，舵机运行反向，则相位值为128+1=129；
+</div>
+
+<h3 id="3-2">3.2 舵机状态</h3>
+<p><strong>舵机状态：0表示正常，1表示异常</strong></p>
+<ul>
+<li><strong>位数/位权重：说明</strong></li>
+<li>BIT0（1）：电压状态</li>
+<li>BIT1（2）：磁编码状态</li>
+<li>BIT2（4）：温度状态</li>
+<li>BIT3（8）：电流状态</li>
+<li>BIT4（16）：扭矩状态：0表示扭矩关闭，1表示扭矩打开</li>
+<li>BIT5（32）：负载状态</li>
+</ul>
+<div class="tip">
+如果同时有多种状态，舵机的状态值为各个位值之和。例如：电压过压/欠压与舵机过热，则舵机状态值为4+1=5；
+</div>
+
+<h3 id="3-3">3.3 保护开关</h3>
+<p><strong>卸载条件：0表示关闭，1表示开启</strong></p>
+<ul>
+<li><strong>位数/位权重：说明</strong></li>
+<li>BIT0（1）：电压保护</li>
+<li>BIT1（2）：磁编码保护</li>
+<li>BIT2（4）：过热保护</li>
+<li>BIT3（8）：过流保护</li>
+<li>BIT4（16）：----</li>
+<li>BIT5（32）：负载过载</li>
+</ul>
+<div class="tip">
+如果同时设置多个位，舵机的卸载条件值为各位值之和。例如：电压保护与过热保护同时开启，则卸载条件值为4+1=5；
+</div>
+
+<h3 id="3-4">3.4 LED报警条件</h3>
+<p><strong>LED报警条件：0表示关闭，1表示开启</strong></p>
+<ul>
+<li><strong>位数/位权重：说明</strong></li>
+<li>BIT0（1）：电压报警</li>
+<li>BIT1（2）：磁编码报警</li>
+<li>BIT2（4）：过热报警</li>
+<li>BIT3（8）：过流报警</li>
+<li>BIT4（16）：----</li>
+<li>BIT5（32）：负载过载报警</li>
+</ul>
+<div class="tip">
+如果同时设置多个位，舵机的LED报警条件值为各位值之和。例如：电压报警与过热报警同时开启，则报警条件值为4+1=5；
+</div>
+
+<h3 id="3-5">3.5 故障复位</h3>
+<p><strong>故障复位：0无效，1表示复位</strong></p>
+<ul>
+<li><strong>位数/位权重：说明</strong></li>
+<li>BIT0（1）：复位过载故障；自动复位开启，反向目标与关闭扭矩开关可复位故障</li>
+<li>BIT1（2）：复位过流故障；自动复位开启，反向目标与关闭扭矩开关可复位故障</li>
+<li>BIT2（4）：中位设置，当前位置设置为2048中位</li>
+<li>BIT3（8）：----</li>
+<li>BIT4（16）：----</li>
+<li>BIT5（32）：复位过压/欠压，电压恢复正常，状态复位写32复位过压/欠压状态；自动复位开启，电压恢复正常自动复位</li>
+<li>BIT6（64）：复位过热状态，温度恢复正常，状态复位写64复位过热状态；自动复位开启，温度恢复正常自动复位</li>
+<li>BIT7（128）：复位磁编码状态，磁编码连接正常，状态复位写128复位磁编码状态；自动复位开启，磁编码连接正常自动复位</li>
+</ul>
+<div class="tip">
+如果同时设置多个位，复位过载故障与复位过流故障的值为各位值之和。例如：复位过载故障同时复位过流故障，则复位故障值为1+2=3；
+</div>
+
+</body>
+</html>
